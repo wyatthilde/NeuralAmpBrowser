@@ -1,4 +1,4 @@
-#define PLUG_NAME "NeuralAmpModeler"
+#define PLUG_NAME "NAM Stereo"
 #define PLUG_MFR "Steven Atkinson"
 #define PLUG_VERSION_HEX 0x00000800
 #define PLUG_VERSION_STR "0.8.0"
@@ -27,7 +27,7 @@
 #define PLUG_DOES_MPE 0
 #define PLUG_DOES_STATE_CHUNKS 0
 #define PLUG_HAS_UI 1
-#define PLUG_WIDTH 600
+#define PLUG_WIDTH 660
 #define PLUG_HEIGHT 400
 #define PLUG_FPS 60
 #define PLUG_SHARED_RESOURCES 0

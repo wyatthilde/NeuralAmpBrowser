@@ -551,15 +551,15 @@ private:
   NAMGetButtonControl* mGetButton = nullptr;
 };
 
-class NAMMeterControl : public IVPeakAvgMeterControl<>, public IBitmapBase
+class NAMMeterControl : public IVPeakAvgMeterControl<2>, public IBitmapBase
 {
   static constexpr float KMeterMin = -70.0f;
   static constexpr float KMeterMax = -0.01f;
 
 public:
   NAMMeterControl(const IRECT& bounds, const IBitmap& bitmap, const IVStyle& style)
-  : IVPeakAvgMeterControl<>(bounds, "", style.WithShowValue(false).WithDrawFrame(false).WithWidgetFrac(0.8),
-                            EDirection::Vertical, {}, 0, KMeterMin, KMeterMax, {})
+  : IVPeakAvgMeterControl<2>(bounds, "", style.WithShowValue(false).WithDrawFrame(false).WithWidgetFrac(0.8),
+                             EDirection::Vertical, {}, 0, KMeterMin, KMeterMax, {})
   , IBitmapBase(bitmap)
   {
     SetPeakSize(1.0f);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "../AudioDSPTools/dsp/ImpulseResponse.h"
 #include "../AudioDSPTools/dsp/NoiseGate.h"
 #include "../AudioDSPTools/dsp/dsp.h"
@@ -16,14 +18,16 @@
 
 
 const int kNumPresets = 1;
-// The plugin is mono inside
-constexpr size_t kNumChannelsInternal = 1;
+// The plugin processes either 1 channel (Mono) or 2 fully independent channels
+// (Stereo). Buffers are always allocated for the maximum so that flipping the
+// mode never triggers an allocation on the audio thread.
+constexpr size_t kMaxChannelsInternal = 2;
 
-class NAMSender : public iplug::IPeakAvgSender<>
+class NAMSender : public iplug::IPeakAvgSender<2>
 {
 public:
   NAMSender()
-  : iplug::IPeakAvgSender<>(-90.0, true, 5.0f, 1.0f, 300.0f, 500.0f)
+  : iplug::IPeakAvgSender<2>(-90.0, true, 5.0f, 1.0f, 300.0f, 500.0f)
   {
   }
 };
@@ -47,6 +51,7 @@ enum EParams
   kInputCalibrationLevel,
   kOutputMode,
   kSlim,
+  kChannelMode,
   kNumParams
 };
 
@@ -236,7 +241,11 @@ private:
   // it wasn't successful.
   dsp::wav::LoadReturnCode _StageIR(const WDL_String& irPath);
 
-  bool _HaveModel() const { return this->mModel != nullptr; };
+  bool _HaveModel() const { return this->mModel[0] != nullptr; };
+  // Every channel holds an identical model in this phase, so metadata queries
+  // (loudness, calibration levels, latency) can read channel 0.
+  ResamplingNAM* _RefModel() { return this->mModel[0].get(); };
+  const ResamplingNAM* _RefModel() const { return this->mModel[0].get(); };
   // Prepare the input & output buffers
   void _PrepareBuffers(const size_t numChannels, const size_t numFrames);
   // Manage pointers
@@ -293,13 +302,21 @@ private:
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
   dsp::noise_gate::Gain mNoiseGateGain;
-  // The model actually being used:
-  std::unique_ptr<ResamplingNAM> mModel;
-  // And the IR
-  std::unique_ptr<dsp::ImpulseResponse> mIR;
+  // One independent model and IR instance per internal channel. NAM inference
+  // and convolution are both stateful, so two channels must never share an
+  // instance -- their histories would interleave.
+  std::array<std::unique_ptr<ResamplingNAM>, kMaxChannelsInternal> mModel;
+  std::array<std::unique_ptr<dsp::ImpulseResponse>, kMaxChannelsInternal> mIR;
   // Manages switching what DSP is being used.
-  std::unique_ptr<ResamplingNAM> mStagedModel;
-  std::unique_ptr<dsp::ImpulseResponse> mStagedIR;
+  std::array<std::unique_ptr<ResamplingNAM>, kMaxChannelsInternal> mStagedModel;
+  std::array<std::unique_ptr<dsp::ImpulseResponse>, kMaxChannelsInternal> mStagedIR;
+  // Set only after every element of the corresponding staged array has been
+  // written, so the audio thread can never observe a half-populated stage and
+  // end up running mismatched models on L and R.
+  std::atomic<bool> mStagedModelReady = false;
+  std::atomic<bool> mStagedIRReady = false;
+  // How many channels we actually process: 1 (Mono) or 2 (Stereo).
+  std::atomic<size_t> mNumChannelsInternal = 1;
   // Flags to take away the modules at a safe time.
   std::atomic<bool> mShouldRemoveModel = false;
   std::atomic<bool> mShouldRemoveIR = false;
