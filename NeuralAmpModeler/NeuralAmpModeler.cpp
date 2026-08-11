@@ -4,7 +4,9 @@
 #include <iostream>
 #include <utility>
 
+#ifndef NO_IGRAPHICS
 #include "Colors.h"
+#endif
 #include "../NeuralAmpModelerCore/NAM/activations.h"
 #include "../NeuralAmpModelerCore/NAM/get_dsp.h"
 // clang-format off
@@ -15,13 +17,22 @@
 // clang-format on
 #include "architecture.hpp"
 
+#ifndef NO_IGRAPHICS
 #include "NeuralAmpModelerControls.h"
+#endif
+
+#ifdef NO_IGRAPHICS
+#include "NeuralAmpModelerDialogs.h"
+#endif
 
 using namespace iplug;
+#ifndef NO_IGRAPHICS
 using namespace igraphics;
+#endif
 
 const double kDCBlockerFrequency = 5.0;
 
+#ifndef NO_IGRAPHICS
 // Styles
 const IVColorSpec colorSpec{
   DEFAULT_BGCOLOR, // Background
@@ -68,6 +79,7 @@ EMsgBoxResult _ShowMessageBox(iplug::igraphics::IGraphics* pGraphics, const char
   return pGraphics->ShowMessageBox(str, caption, type);
 #endif
 }
+#endif // NO_IGRAPHICS
 
 const std::string kCalibrateInputParamName = "CalibrateInput";
 const bool kDefaultCalibrateInput = false;
@@ -100,6 +112,17 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
   mNoiseGateTrigger.AddListener(&mNoiseGateGain);
 
+#ifdef NO_IGRAPHICS
+  // WebView editor: load HTML UI
+  mEditorInitFunc = [&]() {
+#ifdef OS_WIN
+    LoadFile("index.html", nullptr);
+#else
+    LoadFile("index.html", GetBundleID());
+#endif
+    EnableScroll(false);
+  };
+#else
   mMakeGraphicsFunc = [&]() {
 
 #ifdef OS_IOS
@@ -319,6 +342,7 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     // pGraphics->GetControlWithTag(kCtrlTagOutNorm)->SetMouseEventsWhenDisabled(false);
     // pGraphics->GetControlWithTag(kCtrlTagCalibrateInput)->SetMouseEventsWhenDisabled(false);
   };
+#endif // NO_IGRAPHICS
 }
 
 NeuralAmpModeler::~NeuralAmpModeler()
@@ -448,14 +472,23 @@ void NeuralAmpModeler::OnIdle()
 
   if (mNewModelLoadedInDSP)
   {
+#ifdef NO_IGRAPHICS
+    _UpdateControlsFromModel();
+    mNewModelLoadedInDSP = false;
+#else
     if (auto* pGraphics = GetUI())
     {
       _UpdateControlsFromModel();
       mNewModelLoadedInDSP = false;
     }
+#endif
   }
   if (mModelCleared)
   {
+#ifdef NO_IGRAPHICS
+    EvaluateJavaScript("onModelCleared()");
+    mModelCleared = false;
+#else
     if (auto* pGraphics = GetUI())
     {
       // FIXME -- need to disable only the "normalized" model
@@ -470,6 +503,7 @@ void NeuralAmpModeler::OnIdle()
       pGraphics->SetAllControlsDirty();
       mModelCleared = false;
     }
+#endif
   }
 }
 
@@ -516,14 +550,14 @@ void NeuralAmpModeler::OnUIOpen()
     // If it's not loaded yet, then mark as failed.
     // If it's yet to be loaded, then the completion handler will set us straight once it runs.
     if (mModel[0] == nullptr && !mStagedModelReady)
-      SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
+      SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, 0, nullptr);
   }
 
   if (mIRPath.GetLength())
   {
     SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, mIRPath.GetLength(), mIRPath.Get());
     if (mIR[0] == nullptr && !mStagedIRReady)
-      SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed);
+      SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed, 0, nullptr);
   }
 
   if (mModel[0] != nullptr)
@@ -555,6 +589,11 @@ void NeuralAmpModeler::OnParamChange(int paramIdx)
 
 void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
 {
+#ifdef NO_IGRAPHICS
+  // In WebView mode, the JS OnParamChange callback handles enable/disable
+  // logic for dependent controls (gate threshold, EQ knobs, IR browser).
+  // Parameter values are automatically sent to JS via SPVFD().
+#else
   if (auto pGraphics = GetUI())
   {
     bool active = GetParam(paramIdx)->Bool();
@@ -569,6 +608,7 @@ void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
       default: break;
     }
   }
+#endif
 }
 
 bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const void* pData)
@@ -581,6 +621,12 @@ bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const vo
     {
       mHighLightColor.Set((const char*)pData);
 
+#ifdef NO_IGRAPHICS
+      // In WebView mode, update the CSS theme color via JS
+      WDL_String js;
+      js.SetFormatted(256, "document.documentElement.style.setProperty('--theme-color','%s')", mHighLightColor.Get());
+      EvaluateJavaScript(js.Get());
+#else
       if (GetUI())
       {
         GetUI()->ForStandardControlsFunc([&](IControl* pControl) {
@@ -596,9 +642,44 @@ bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const vo
           pControl->GetUI()->SetAllControlsDirty();
         });
       }
+#endif
 
       return true;
     }
+#ifdef NO_IGRAPHICS
+    case kMsgTagOpenModelDialog:
+    {
+      WDL_String path;
+      if (NAM_ShowOpenFileDialog("Select NAM Model", "nam", path))
+      {
+        const std::string msg = _StageModel(path);
+        if (msg.size())
+        {
+          std::cerr << "Failed to load NAM model: " << msg << std::endl;
+          SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, 0, nullptr);
+        }
+        else
+        {
+          std::cout << "Loaded model: " << path.Get() << std::endl;
+        }
+      }
+      return true;
+    }
+    case kMsgTagOpenIRDialog:
+    {
+      WDL_String path;
+      if (NAM_ShowOpenFileDialog("Select IR File", "wav", path))
+      {
+        mIRPath = path;
+        const dsp::wav::LoadReturnCode retCode = _StageIR(path);
+        if (retCode != dsp::wav::LoadReturnCode::SUCCESS)
+        {
+          std::cerr << "Failed to load IR: " << dsp::wav::GetMsgForLoadReturnCode(retCode) << std::endl;
+        }
+      }
+      return true;
+    }
+#endif
     default: return false;
   }
 }
@@ -815,7 +896,7 @@ std::string NeuralAmpModeler::_StageModel(const WDL_String& modelPath)
   }
   catch (std::runtime_error& e)
   {
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
+    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed, 0, nullptr);
 
     mStagedModelReady = false;
     for (auto& model : mStagedModel)
@@ -872,7 +953,7 @@ dsp::wav::LoadReturnCode NeuralAmpModeler::_StageIR(const WDL_String& irPath)
     for (auto& ir : mStagedIR)
       ir = nullptr;
     mIRPath = previousIRPath;
-    SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed);
+    SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed, 0, nullptr);
   }
 
   return wavState;
@@ -1036,6 +1117,26 @@ void NeuralAmpModeler::_UpdateControlsFromModel()
   {
     return;
   }
+#ifdef NO_IGRAPHICS
+  // Send model info to WebView
+  const double sampleRate = _RefModel()->GetEncapsulatedSampleRate();
+  const bool hasInputLevel = _RefModel()->HasInputLevel();
+  const double inputLevel = hasInputLevel ? _RefModel()->GetInputLevel() : 0.0;
+  const bool hasOutputLevel = _RefModel()->HasOutputLevel();
+  const double outputLevel = hasOutputLevel ? _RefModel()->GetOutputLevel() : 0.0;
+  const bool hasLoudness = _RefModel()->HasLoudness();
+  const bool isSlimmable = _RefModel()->GetSlimmableModel() != nullptr;
+
+  WDL_String js;
+  js.SetFormatted(512,
+    "onModelLoaded({sampleRate:%.1f,hasInputLevel:%s,inputLevel:%.2f,hasOutputLevel:%s,outputLevel:%.2f,hasLoudness:%s,isSlimmable:%s})",
+    sampleRate,
+    hasInputLevel ? "true" : "false", inputLevel,
+    hasOutputLevel ? "true" : "false", outputLevel,
+    hasLoudness ? "true" : "false",
+    isSlimmable ? "true" : "false");
+  EvaluateJavaScript(js.Get());
+#else
   if (auto* pGraphics = GetUI())
   {
     ModelInfo modelInfo;
@@ -1063,6 +1164,7 @@ void NeuralAmpModeler::_UpdateControlsFromModel()
       pSlimIcon->Hide(!show);
     }
   }
+#endif
 }
 
 void NeuralAmpModeler::_UpdateLatency()
