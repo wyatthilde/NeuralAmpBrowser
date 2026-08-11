@@ -2,6 +2,11 @@
 
 #include <array>
 
+// iPlug2 headers must come first so that iplug:: types are defined before
+// AudioDSPTools / NAMCore headers that depend on them.
+#include "IPlug_include_in_plug_hdr.h"
+#include "ISender.h"
+
 #include "../AudioDSPTools/dsp/ImpulseResponse.h"
 #include "../AudioDSPTools/dsp/NoiseGate.h"
 #include "../AudioDSPTools/dsp/dsp.h"
@@ -10,11 +15,10 @@
 #include "../NeuralAmpModelerCore/NAM/dsp.h"
 #include "../NeuralAmpModelerCore/NAM/slimmable.h"
 
+#ifndef NO_IGRAPHICS
 #include "Colors.h"
+#endif
 #include "ToneStack.h"
-
-#include "IPlug_include_in_plug_hdr.h"
-#include "ISender.h"
 
 
 const int kNumPresets = 1;
@@ -83,6 +87,9 @@ enum EMsgTags
   kMsgTagLoadFailed,
   kMsgTagLoadedModel,
   kMsgTagLoadedIR,
+  // WebView file dialog requests (UI -> DSP)
+  kMsgTagOpenModelDialog,
+  kMsgTagOpenIRDialog,
   kNumMsgTags
 };
 
@@ -336,7 +343,11 @@ private:
   // Path to IR (.wav file)
   WDL_String mIRPath;
 
+#ifdef NO_IGRAPHICS
+  WDL_String mHighLightColor{"#5085E8"}; // Azure theme color
+#else
   WDL_String mHighLightColor{PluginColors::NAM_THEMECOLOR.ToColorCode()};
+#endif
 
   std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
 

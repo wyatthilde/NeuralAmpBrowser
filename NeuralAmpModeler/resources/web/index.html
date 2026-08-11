@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+/* ===== Reset & Base ===== */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #1a1a1f;
+  --bg-panel: #222228;
+  --bg-knob: #2a2a32;
+  --bg-file: #1e1e26;
+  --theme-color: #5085E8;
+  --theme-glow: rgba(80, 133, 232, 0.3);
+  --theme-dim: rgba(80, 133, 232, 0.15);
+  --text-primary: #f2f2f2;
+  --text-secondary: #8888a0;
+  --text-dim: #666680;
+  --meter-bg: #16161c;
+  --meter-green: #4ecd5f;
+  --meter-yellow: #e8c840;
+  --meter-red: #e84040;
+  --toggle-off: #3a3a44;
+  --toggle-on: var(--theme-color);
+  --border-radius: 6px;
+  --file-border: rgba(80, 133, 232, 0.25);
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ===== Layout ===== */
+.plugin-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.meter-column {
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 8px 20px;
+  flex-shrink: 0;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0 10px;
+  min-width: 0;
+}
+
+/* ===== Title ===== */
+.title {
+  font-family: 'Michroma', -apple-system, sans-serif;
+  font-size: 18px;
+  letter-spacing: 3px;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* ===== Knobs Row ===== */
+.knobs-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  width: 100%;
+  padding: 0 10px;
+}
+
+.knob-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 88px;
+}
+
+.knob-wrapper {
+  width: 72px;
+  height: 72px;
+  position: relative;
+  cursor: pointer;
+}
+
+.knob-bg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3a46, #222230);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+  position: absolute;
+}
+
+.knob-track {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.knob-track svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(0deg);
+}
+
+.knob-track .track-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.knob-track .track-fill {
+  fill: none;
+  stroke: var(--theme-color);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.05s;
+}
+
+.knob-indicator {
+  position: absolute;
+  width: 2px;
+  height: 14px;
+  background: var(--text-primary);
+  left: 50%;
+  top: 6px;
+  margin-left: -1px;
+  transform-origin: 1px 30px;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.knob-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.knob-value {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  pointer-events: none;
+  height: 12px;
+}
+
+.knob-container.disabled .knob-bg {
+  opacity: 0.35;
+}
+.knob-container.disabled .knob-track .track-fill {
+  stroke: var(--text-dim);
+}
+.knob-container.disabled .knob-label,
+.knob-container.disabled .knob-value {
+  opacity: 0.35;
+}
+
+/* ===== Toggles Row ===== */
+.toggles-row {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 10px;
+  padding: 0 10px;
+}
+
+.toggle-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.toggle-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.toggle-switch {
+  width: 36px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--toggle-off);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.toggle-switch.active {
+  background: var(--toggle-on);
+}
+
+.toggle-switch .toggle-handle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #eee;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.toggle-switch.active .toggle-handle {
+  left: 20px;
+}
+
+/* ===== File Browsers ===== */
+.file-browsers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 60px;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.file-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--theme-color);
+}
+
+.file-icon.ir-toggle {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.file-icon.ir-toggle:hover {
+  background: rgba(255,255,255,0.05);
+}
+.file-icon.ir-toggle.off svg {
+  fill: var(--text-dim);
+}
+
+.file-browser {
+  flex: 1;
+  height: 30px;
+  background: var(--bg-file);
+  border: 1px solid var(--file-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+
+.file-browser:hover {
+  border-color: var(--theme-color);
+}
+
+.file-browser.error {
+  border-color: var(--meter-red);
+}
+
+.file-browser .file-open-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.file-browser .file-open-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--text-secondary);
+}
+
+.file-browser .file-name {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.file-browser .file-name.loaded {
+  color: var(--text-primary);
+}
+
+.file-browser .file-nav-btn,
+.file-browser .file-clear-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 3px;
+}
+
+.file-browser .file-nav-btn:hover,
+.file-browser .file-clear-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.file-browser .file-nav-btn svg,
+.file-browser .file-clear-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: var(--text-secondary);
+}
+
+.file-browser .file-clear-btn svg {
+  width: 8px;
+  height: 8px;
+}
+
+.file-browser.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.slim-icon {
+  width: 28px;
+  height: 28px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.slim-icon:hover {
+  background: rgba(255,255,255,0.05);
+}
+.slim-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--theme-color);
+}
+.slim-icon.visible {
+  display: flex;
+}
+
+/* ===== Globe link ===== */
+.globe-link {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.globe-link:hover {
+  background: rgba(255,255,255,0.05);
+}
+.globe-link svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--text-dim);
+}
+
+/* ===== Meters ===== */
+.meter-container {
+  width: 32px;
+  height: 180px;
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.meter-bar-container {
+  width: 12px;
+  height: 100%;
+  background: var(--meter-bg);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.meter-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, var(--meter-green) 0%, var(--meter-green) 60%, var(--meter-yellow) 80%, var(--meter-red) 100%);
+  border-radius: 0 0 3px 3px;
+  transition: height 0.06s linear;
+}
+
+.meter-label {
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* ===== Settings Button ===== */
+.settings-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.settings-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+.settings-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--text-secondary);
+}
+
+/* ===== Settings Panel ===== */
+.settings-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 31, 0.97);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  padding: 30px 40px;
+  overflow-y: auto;
+}
+
+.settings-overlay.visible {
+  display: flex;
+}
+
+.settings-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-close:hover {
+  background: rgba(255,255,255,0.08);
+}
+.settings-close svg {
+  width: 12px;
+  height: 12px;
+  fill: var(--text-secondary);
+}
+
+.settings-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.settings-section {
+  margin-bottom: 16px;
+}
+
+.settings-section-title {
+  font-size: 11px;
+  color: var(--theme-color);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.settings-row-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-row-value {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.settings-radio-group {
+  display: flex;
+  gap: 4px;
+}
+
+.settings-radio {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+
+.settings-radio.active {
+  background: var(--theme-dim);
+  color: var(--theme-color);
+  border-color: var(--theme-color);
+}
+
+.settings-radio.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.settings-input {
+  width: 80px;
+  height: 28px;
+  background: var(--bg-file);
+  border: 1px solid var(--file-border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.settings-input:focus {
+  border-color: var(--theme-color);
+}
+.settings-input.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ===== Slim Overlay ===== */
+.slim-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 31, 0.85);
+  z-index: 90;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.slim-overlay.visible {
+  display: flex;
+}
+
+.slim-knob-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+</style>
+</head>
+<body>
+<!-- ===== SVG Definitions ===== -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Model icon -->
+    <symbol id="icon-model" viewBox="0 0 24 24"><path d="M12 3v18m-7-7l7 7 7-7M5 8l7-5 7 5"/><path d="M5 8v8l7 5 7-5V8" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <!-- IR icon -->
+    <symbol id="icon-ir" viewBox="0 0 24 24"><path d="M3 12h2l3-8 4 16 3-10 2 4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- Folder/file icon -->
+    <symbol id="icon-file" viewBox="0 0 24 24"><path d="M3 7v12a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <!-- Cross -->
+    <symbol id="icon-cross" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <!-- Left arrow -->
+    <symbol id="icon-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- Right arrow -->
+    <symbol id="icon-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- Gear -->
+    <symbol id="icon-gear" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <!-- Globe -->
+    <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <!-- Slim icon (layers) -->
+    <symbol id="icon-slim" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="plugin-container">
+  <!-- Left Meter -->
+  <div class="meter-column">
+    <div class="meter-container" id="input-meter">
+      <div class="meter-bar-container"><div class="meter-bar" id="meter-in-l"></div></div>
+      <div class="meter-bar-container"><div class="meter-bar" id="meter-in-r"></div></div>
+    </div>
+    <div class="meter-label">IN</div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="title">NEURAL AMP MODELER</div>
+
+    <!-- Knobs -->
+    <div class="knobs-row" id="knobs-row"></div>
+
+    <!-- Toggles -->
+    <div class="toggles-row">
+      <div class="toggle-container">
+        <span class="toggle-label">NOISE GATE</span>
+        <div class="toggle-switch" id="toggle-ng" data-param="6"></div>
+      </div>
+      <div class="toggle-container">
+        <span class="toggle-label">EQ</span>
+        <div class="toggle-switch" id="toggle-eq" data-param="7"></div>
+      </div>
+      <div class="toggle-container">
+        <span class="toggle-label">STEREO</span>
+        <div class="toggle-switch" id="toggle-stereo" data-param="13"></div>
+      </div>
+    </div>
+
+    <!-- File Browsers -->
+    <div class="file-browsers">
+      <!-- Model Row -->
+      <div class="file-row">
+        <div class="file-icon">
+          <svg><use href="#icon-model"/></svg>
+        </div>
+        <div class="file-browser" id="model-browser">
+          <button class="file-open-btn" title="Browse..."><svg><use href="#icon-file"/></svg></button>
+          <button class="file-nav-btn" id="model-prev" title="Previous"><svg><use href="#icon-left"/></svg></button>
+          <span class="file-name" id="model-name">Select model...</span>
+          <button class="file-nav-btn" id="model-next" title="Next"><svg><use href="#icon-right"/></svg></button>
+          <button class="file-clear-btn" id="model-clear" title="Clear"><svg><use href="#icon-cross"/></svg></button>
+        </div>
+        <div class="slim-icon" id="slim-icon" title="Slim">
+          <svg><use href="#icon-slim"/></svg>
+        </div>
+        <div class="globe-link" id="model-globe" title="Get NAM Models">
+          <svg><use href="#icon-globe"/></svg>
+        </div>
+      </div>
+
+      <!-- IR Row -->
+      <div class="file-row">
+        <div class="file-icon ir-toggle" id="ir-toggle-icon" title="Toggle IR">
+          <svg><use href="#icon-ir"/></svg>
+        </div>
+        <div class="file-browser" id="ir-browser">
+          <button class="file-open-btn" title="Browse..."><svg><use href="#icon-file"/></svg></button>
+          <button class="file-nav-btn" id="ir-prev" title="Previous"><svg><use href="#icon-left"/></svg></button>
+          <span class="file-name" id="ir-name">Select IR...</span>
+          <button class="file-nav-btn" id="ir-next" title="Next"><svg><use href="#icon-right"/></svg></button>
+          <button class="file-clear-btn" id="ir-clear" title="Clear"><svg><use href="#icon-cross"/></svg></button>
+        </div>
+        <div class="globe-link" id="ir-globe" title="Get IRs">
+          <svg><use href="#icon-globe"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Meter -->
+  <div class="meter-column">
+    <div class="meter-container" id="output-meter">
+      <div class="meter-bar-container"><div class="meter-bar" id="meter-out-l"></div></div>
+      <div class="meter-bar-container"><div class="meter-bar" id="meter-out-r"></div></div>
+    </div>
+    <div class="meter-label">OUT</div>
+  </div>
+
+  <!-- Settings Button -->
+  <button class="settings-btn" id="settings-btn" title="Settings">
+    <svg><use href="#icon-gear"/></svg>
+  </button>
+</div>
+
+<!-- Settings Overlay -->
+<div class="settings-overlay" id="settings-panel">
+  <button class="settings-close" id="settings-close"><svg><use href="#icon-cross"/></svg></button>
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Output Mode</div>
+    <div class="settings-radio-group" id="output-mode-group">
+      <div class="settings-radio" data-value="0">Raw</div>
+      <div class="settings-radio" data-value="1">Normalized</div>
+      <div class="settings-radio" data-value="2">Calibrated</div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Input Calibration</div>
+    <div class="settings-toggle-row">
+      <span class="settings-row-label">Calibrate Input</span>
+      <div class="toggle-switch" id="toggle-calibrate" data-param="9"></div>
+    </div>
+    <div class="settings-row">
+      <span class="settings-row-label">Calibration Level (dBu)</span>
+      <input type="number" class="settings-input" id="calibration-level" step="0.1" data-param="10" />
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Model Info</div>
+    <div class="settings-row">
+      <span class="settings-row-label">Sample Rate</span>
+      <span class="settings-row-value" id="model-sr">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-row-label">Input Level</span>
+      <span class="settings-row-value" id="model-in-level">—</span>
+    </div>
+    <div class="settings-row">
+      <span class="settings-row-label">Output Level</span>
+      <span class="settings-row-value" id="model-out-level">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- Slim Overlay -->
+<div class="slim-overlay" id="slim-overlay">
+  <div class="slim-knob-area" id="slim-knob-area"></div>
+</div>
+
+<script>
+// ===== iPlug2 Bridge Functions =====
+
+// C++ → JS: called by iPlug2 WebView delegate
+function SPVFD(paramIdx, val) {
+  OnParamChange(paramIdx, val);
+}
+
+function SCVFD(ctrlTag, val) {
+  OnControlChange(ctrlTag, val);
+}
+
+function SCMFD(ctrlTag, msgTag, dataSize, base64Data) {
+  OnControlMessage(ctrlTag, msgTag, dataSize, base64Data);
+}
+
+function SAMFD(msgTag, dataSize, base64Data) {
+  OnArbitraryMessage(msgTag, dataSize, base64Data);
+}
+
+function SMMFD() {} // MIDI - not used
+function SSMFD() {} // SysEx - not used
+
+// JS → C++
+function SPVFUI(paramIdx, value) {
+  IPlugSendMsg({msg: "SPVFUI", paramIdx: paramIdx, value: value});
+}
+
+function BPCFUI(paramIdx) {
+  IPlugSendMsg({msg: "BPCFUI", paramIdx: paramIdx});
+}
+
+function EPCFUI(paramIdx) {
+  IPlugSendMsg({msg: "EPCFUI", paramIdx: paramIdx});
+}
+
+function SAMFUI(msgTag, ctrlTag, data) {
+  IPlugSendMsg({msg: "SAMFUI", msgTag: msgTag, ctrlTag: ctrlTag || -1, data: data || 0});
+}
+
+// ===== Constants (must match C++ enums) =====
+const Params = {
+  kInputLevel: 0,
+  kNoiseGateThreshold: 1,
+  kToneBass: 2,
+  kToneMid: 3,
+  kToneTreble: 4,
+  kOutputLevel: 5,
+  kNoiseGateActive: 6,
+  kEQActive: 7,
+  kIRToggle: 8,
+  kCalibrateInput: 9,
+  kInputCalibrationLevel: 10,
+  kOutputMode: 11,
+  kSlim: 12,
+  kChannelMode: 13
+};
+
+const CtrlTags = {
+  kCtrlTagModelFileBrowser: 0,
+  kCtrlTagIRFileBrowser: 1,
+  kCtrlTagInputMeter: 2,
+  kCtrlTagOutputMeter: 3
+};
+
+const MsgTags = {
+  kMsgTagClearModel: 0,
+  kMsgTagClearIR: 1,
+  kMsgTagHighlightColor: 2,
+  kMsgTagLoadFailed: 3,
+  kMsgTagLoadedModel: 4,
+  kMsgTagLoadedIR: 5,
+  kMsgTagOpenModelDialog: 6,
+  kMsgTagOpenIRDialog: 7
+};
+
+// ===== Knob Definitions =====
+const knobDefs = [
+  { paramIdx: Params.kInputLevel,          label: "Input",    unit: "dB", min: -20, max: 20, defaultVal: 0 },
+  { paramIdx: Params.kNoiseGateThreshold,  label: "Gate",     unit: "dB", min: -100, max: 0, defaultVal: -80 },
+  { paramIdx: Params.kToneBass,            label: "Bass",     unit: "",   min: 0, max: 10, defaultVal: 5, group: "eq" },
+  { paramIdx: Params.kToneMid,             label: "Mid",      unit: "",   min: 0, max: 10, defaultVal: 5, group: "eq" },
+  { paramIdx: Params.kToneTreble,          label: "Treble",   unit: "",   min: 0, max: 10, defaultVal: 5, group: "eq" },
+  { paramIdx: Params.kOutputLevel,         label: "Output",   unit: "dB", min: -40, max: 40, defaultVal: 0 }
+];
+
+// ===== State =====
+let paramValues = {};
+let knobElements = {};
+let activeKnob = null;
+let knobStartY = 0;
+let knobStartVal = 0;
+let modelDirectoryFiles = [];
+let modelDirIndex = -1;
+let irDirectoryFiles = [];
+let irDirIndex = -1;
+
+// ===== Knob Arc Helpers =====
+const ARC_START = 225; // degrees from 12 o'clock, clockwise = SVG rotation
+const ARC_END = -45;
+const ARC_RANGE = 270; // total sweep
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  const startRad = (startAngle - 90) * Math.PI / 180;
+  const endRad = (endAngle - 90) * Math.PI / 180;
+  const x1 = cx + r * Math.cos(startRad);
+  const y1 = cy + r * Math.sin(startRad);
+  const x2 = cx + r * Math.cos(endRad);
+  const y2 = cy + r * Math.sin(endRad);
+  const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
+}
+
+function normalizedToAngle(norm) {
+  return -135 + norm * ARC_RANGE; // -135 to +135 degrees
+}
+
+function createKnob(def, index) {
+  const container = document.createElement('div');
+  container.className = 'knob-container';
+  container.id = `knob-${def.paramIdx}`;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'knob-wrapper';
+
+  // Background circle
+  const bg = document.createElement('div');
+  bg.className = 'knob-bg';
+
+  // SVG arc track
+  const track = document.createElement('div');
+  track.className = 'knob-track';
+  const cx = 36, cy = 36, r = 30;
+  const bgPath = describeArc(cx, cy, r, -135, 135);
+  track.innerHTML = `<svg viewBox="0 0 72 72">
+    <path class="track-bg" d="${bgPath}" />
+    <path class="track-fill" id="arc-${def.paramIdx}" d="${bgPath}" />
+  </svg>`;
+
+  // Indicator line
+  const indicator = document.createElement('div');
+  indicator.className = 'knob-indicator';
+  indicator.id = `ind-${def.paramIdx}`;
+
+  wrapper.appendChild(bg);
+  wrapper.appendChild(track);
+  wrapper.appendChild(indicator);
+
+  // Label
+  const label = document.createElement('div');
+  label.className = 'knob-label';
+  label.textContent = def.label;
+
+  // Value display
+  const value = document.createElement('div');
+  value.className = 'knob-value';
+  value.id = `val-${def.paramIdx}`;
+
+  container.appendChild(wrapper);
+  container.appendChild(label);
+  container.appendChild(value);
+
+  // Mouse interaction
+  wrapper.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    activeKnob = def;
+    knobStartY = e.clientY;
+    knobStartVal = paramValues[def.paramIdx] || 0;
+    BPCFUI(def.paramIdx);
+    document.body.style.cursor = 'ns-resize';
+  });
+
+  wrapper.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    // Reset to default
+    const norm = (def.defaultVal - def.min) / (def.max - def.min);
+    setKnobValue(def.paramIdx, norm, true);
+  });
+
+  knobElements[def.paramIdx] = { container, wrapper, def };
+  return container;
+}
+
+function setKnobValue(paramIdx, normalizedValue, sendToHost) {
+  normalizedValue = Math.max(0, Math.min(1, normalizedValue));
+  paramValues[paramIdx] = normalizedValue;
+
+  const el = knobElements[paramIdx];
+  if (!el) return;
+  const def = el.def;
+
+  // Update arc
+  const angle = normalizedToAngle(normalizedValue);
+  const cx = 36, cy = 36, r = 30;
+  const arcPath = describeArc(cx, cy, r, -135, angle);
+  const arc = document.getElementById(`arc-${paramIdx}`);
+  if (arc) arc.setAttribute('d', arcPath);
+
+  // Update indicator rotation
+  const ind = document.getElementById(`ind-${paramIdx}`);
+  if (ind) ind.style.transform = `rotate(${angle}deg)`;
+
+  // Update value text
+  const val = document.getElementById(`val-${paramIdx}`);
+  if (val) {
+    const realVal = def.min + normalizedValue * (def.max - def.min);
+    val.textContent = realVal.toFixed(1) + (def.unit ? ' ' + def.unit : '');
+  }
+
+  if (sendToHost) {
+    SPVFUI(paramIdx, normalizedValue);
+  }
+}
+
+// ===== Initialize Knobs =====
+function initKnobs() {
+  const row = document.getElementById('knobs-row');
+  knobDefs.forEach((def, i) => {
+    const knob = createKnob(def, i);
+    row.appendChild(knob);
+  });
+}
+
+// ===== Mouse Drag for Knobs =====
+document.addEventListener('mousemove', (e) => {
+  if (!activeKnob) return;
+  e.preventDefault();
+  const dy = knobStartY - e.clientY;
+  const sensitivity = e.shiftKey ? 0.001 : 0.005;
+  const newVal = Math.max(0, Math.min(1, knobStartVal + dy * sensitivity));
+  setKnobValue(activeKnob.paramIdx, newVal, true);
+});
+
+document.addEventListener('mouseup', () => {
+  if (activeKnob) {
+    EPCFUI(activeKnob.paramIdx);
+    activeKnob = null;
+    document.body.style.cursor = '';
+  }
+});
+
+// ===== Toggles =====
+function initToggles() {
+  document.querySelectorAll('.toggle-switch[data-param]').forEach(el => {
+    const handle = document.createElement('div');
+    handle.className = 'toggle-handle';
+    el.appendChild(handle);
+
+    el.addEventListener('click', () => {
+      const paramIdx = parseInt(el.dataset.param);
+      const current = paramValues[paramIdx] || 0;
+      const newVal = current >= 0.5 ? 0 : 1;
+      BPCFUI(paramIdx);
+      SPVFUI(paramIdx, newVal);
+      EPCFUI(paramIdx);
+      setToggle(paramIdx, newVal);
+    });
+  });
+}
+
+function setToggle(paramIdx, value) {
+  paramValues[paramIdx] = value;
+  const el = document.querySelector(`.toggle-switch[data-param="${paramIdx}"]`);
+  if (el) {
+    if (value >= 0.5) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  }
+
+  // Handle dependent controls
+  if (paramIdx === Params.kNoiseGateActive) {
+    const gateKnob = knobElements[Params.kNoiseGateThreshold];
+    if (gateKnob) {
+      gateKnob.container.classList.toggle('disabled', value < 0.5);
+    }
+  }
+  if (paramIdx === Params.kEQActive) {
+    knobDefs.forEach(def => {
+      if (def.group === 'eq') {
+        const el = knobElements[def.paramIdx];
+        if (el) el.container.classList.toggle('disabled', value < 0.5);
+      }
+    });
+  }
+  if (paramIdx === Params.kIRToggle) {
+    const irBrowser = document.getElementById('ir-browser');
+    if (irBrowser) irBrowser.classList.toggle('disabled', value < 0.5);
+    const irIcon = document.getElementById('ir-toggle-icon');
+    if (irIcon) irIcon.classList.toggle('off', value < 0.5);
+  }
+}
+
+// ===== Meters =====
+function setMeterValue(ctrlTag, values) {
+  let prefix;
+  if (ctrlTag === CtrlTags.kCtrlTagInputMeter) prefix = 'meter-in';
+  else if (ctrlTag === CtrlTags.kCtrlTagOutputMeter) prefix = 'meter-out';
+  else return;
+
+  // values is [peakL, peakR] or a single value
+  if (typeof values === 'number') {
+    values = [values, values];
+  }
+
+  for (let ch = 0; ch < 2; ch++) {
+    const suffix = ch === 0 ? 'l' : 'r';
+    const bar = document.getElementById(`${prefix}-${suffix}`);
+    if (bar) {
+      // Convert from linear amplitude to percentage height (log-ish scale)
+      const v = Math.max(0, Math.min(1, values[ch]));
+      const db = v > 0.0001 ? 20 * Math.log10(v) : -90;
+      const pct = Math.max(0, Math.min(100, ((db + 90) / 90) * 100));
+      bar.style.height = pct + '%';
+    }
+  }
+}
+
+// ===== File Browsers =====
+function initFileBrowsers() {
+  // Model browser
+  const modelBrowser = document.getElementById('model-browser');
+  const modelOpenBtn = modelBrowser.querySelector('.file-open-btn');
+  modelOpenBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    SAMFUI(MsgTags.kMsgTagOpenModelDialog);
+  });
+  modelBrowser.addEventListener('click', () => {
+    SAMFUI(MsgTags.kMsgTagOpenModelDialog);
+  });
+
+  document.getElementById('model-clear').addEventListener('click', (e) => {
+    e.stopPropagation();
+    SAMFUI(MsgTags.kMsgTagClearModel);
+    document.getElementById('model-name').textContent = 'Select model...';
+    document.getElementById('model-name').classList.remove('loaded');
+    modelBrowser.classList.remove('error');
+    document.getElementById('slim-icon').classList.remove('visible');
+    modelDirectoryFiles = [];
+    modelDirIndex = -1;
+  });
+
+  document.getElementById('model-prev').addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigateFile('model', -1);
+  });
+  document.getElementById('model-next').addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigateFile('model', 1);
+  });
+
+  // IR browser
+  const irBrowser = document.getElementById('ir-browser');
+  const irOpenBtn = irBrowser.querySelector('.file-open-btn');
+  irOpenBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    SAMFUI(MsgTags.kMsgTagOpenIRDialog);
+  });
+  irBrowser.addEventListener('click', () => {
+    SAMFUI(MsgTags.kMsgTagOpenIRDialog);
+  });
+
+  document.getElementById('ir-clear').addEventListener('click', (e) => {
+    e.stopPropagation();
+    SAMFUI(MsgTags.kMsgTagClearIR);
+    document.getElementById('ir-name').textContent = 'Select IR...';
+    document.getElementById('ir-name').classList.remove('loaded');
+    irBrowser.classList.remove('error');
+    irDirectoryFiles = [];
+    irDirIndex = -1;
+  });
+
+  document.getElementById('ir-prev').addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigateFile('ir', -1);
+  });
+  document.getElementById('ir-next').addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigateFile('ir', 1);
+  });
+
+  // IR toggle icon
+  document.getElementById('ir-toggle-icon').addEventListener('click', () => {
+    const current = paramValues[Params.kIRToggle] || 0;
+    const newVal = current >= 0.5 ? 0 : 1;
+    BPCFUI(Params.kIRToggle);
+    SPVFUI(Params.kIRToggle, newVal);
+    EPCFUI(Params.kIRToggle);
+    setToggle(Params.kIRToggle, newVal);
+  });
+
+  // Globe links (open URLs via sending a message - or we can use window.open)
+  document.getElementById('model-globe').addEventListener('click', () => {
+    // Can't open URLs directly from WKWebView in plugin context;
+    // send message to C++ to handle it
+    SAMFUI(100); // custom tag for "open model URL"
+  });
+  document.getElementById('ir-globe').addEventListener('click', () => {
+    SAMFUI(101); // custom tag for "open IR URL"
+  });
+
+  // Slim icon
+  document.getElementById('slim-icon').addEventListener('click', () => {
+    showSlimOverlay();
+  });
+}
+
+function navigateFile(type, direction) {
+  // Navigation within the same directory
+  // This sends a message to C++ which knows the directory
+  const tag = type === 'model' ? 102 : 103; // custom tags for nav
+  const data = direction > 0 ? 'next' : 'prev';
+  SAMFUI(tag, -1, window.btoa(data));
+}
+
+function getFileName(fullPath) {
+  if (!fullPath) return '';
+  const parts = fullPath.replace(/\\/g, '/').split('/');
+  return parts[parts.length - 1];
+}
+
+// ===== Settings =====
+function initSettings() {
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.add('visible');
+  });
+  document.getElementById('settings-close').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.remove('visible');
+  });
+
+  // Output mode radio buttons
+  document.querySelectorAll('#output-mode-group .settings-radio').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.classList.contains('disabled')) return;
+      const val = parseInt(el.dataset.value);
+      const numOptions = 3;
+      const norm = val / (numOptions - 1);
+      BPCFUI(Params.kOutputMode);
+      SPVFUI(Params.kOutputMode, norm);
+      EPCFUI(Params.kOutputMode);
+      updateOutputMode(norm);
+    });
+  });
+
+  // Calibration level input
+  const calInput = document.getElementById('calibration-level');
+  calInput.addEventListener('change', () => {
+    const val = parseFloat(calInput.value);
+    if (isNaN(val)) return;
+    const clamped = Math.max(-60, Math.min(60, val));
+    const norm = (clamped - (-60)) / (60 - (-60));
+    BPCFUI(Params.kInputCalibrationLevel);
+    SPVFUI(Params.kInputCalibrationLevel, norm);
+    EPCFUI(Params.kInputCalibrationLevel);
+  });
+}
+
+function updateOutputMode(normalizedValue) {
+  const modeIndex = Math.round(normalizedValue * 2);
+  document.querySelectorAll('#output-mode-group .settings-radio').forEach(el => {
+    const v = parseInt(el.dataset.value);
+    el.classList.toggle('active', v === modeIndex);
+  });
+}
+
+// ===== Slim Overlay =====
+function showSlimOverlay() {
+  const overlay = document.getElementById('slim-overlay');
+  overlay.classList.add('visible');
+
+  // Create slim knob if not yet created
+  const area = document.getElementById('slim-knob-area');
+  if (!area.hasChildNodes()) {
+    const slimDef = { paramIdx: Params.kSlim, label: "Slim", unit: "", min: 0, max: 1, defaultVal: 0 };
+    const knob = createKnob(slimDef, -1);
+    knob.style.transform = 'scale(1.3)';
+    area.appendChild(knob);
+    // Set current value
+    if (paramValues[Params.kSlim] !== undefined) {
+      setKnobValue(Params.kSlim, paramValues[Params.kSlim], false);
+    }
+  }
+}
+
+function initSlimOverlay() {
+  document.getElementById('slim-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('slim-overlay')) {
+      document.getElementById('slim-overlay').classList.remove('visible');
+    }
+  });
+}
+
+// ===== iPlug2 Callbacks =====
+
+function OnParamChange(paramIdx, normalizedValue) {
+  paramValues[paramIdx] = normalizedValue;
+
+  // Knob params (0-5, 12)
+  if (knobElements[paramIdx]) {
+    setKnobValue(paramIdx, normalizedValue, false);
+  }
+
+  // Boolean/toggle params
+  switch (paramIdx) {
+    case Params.kNoiseGateActive:
+    case Params.kEQActive:
+    case Params.kIRToggle:
+    case Params.kChannelMode:
+      setToggle(paramIdx, normalizedValue);
+      break;
+
+    case Params.kCalibrateInput:
+      setToggle(paramIdx, normalizedValue);
+      // Enable/disable calibration level input
+      const calInput = document.getElementById('calibration-level');
+      if (calInput) calInput.classList.toggle('disabled', normalizedValue < 0.5);
+      break;
+
+    case Params.kOutputMode:
+      updateOutputMode(normalizedValue);
+      break;
+
+    case Params.kInputCalibrationLevel: {
+      const realVal = -60 + normalizedValue * 120;
+      const calEl = document.getElementById('calibration-level');
+      if (calEl) calEl.value = realVal.toFixed(1);
+      break;
+    }
+  }
+}
+
+function OnControlChange(ctrlTag, value) {
+  // Currently unused - meter data arrives via OnControlMessage
+}
+
+function OnControlMessage(ctrlTag, msgTag, dataSize, base64Data) {
+  // Meter data from IPeakAvgSender: msgTag 0 = kUpdateMessage
+  if (msgTag === 0 &&
+      (ctrlTag === CtrlTags.kCtrlTagInputMeter || ctrlTag === CtrlTags.kCtrlTagOutputMeter)) {
+    // Decode ISenderData<2, std::pair<float,float>> from base64
+    // Layout: int ctrlTag(4) | int nChans(4) | int chanOffset(4) |
+    //         pair<float,float>[0] peak,avg (8) | pair<float,float>[1] peak,avg (8)
+    const raw = atob(base64Data);
+    const buf = new ArrayBuffer(raw.length);
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    const view = new DataView(buf);
+    const nChans = view.getInt32(4, true);
+    // Read RMS/avg values (second float in each pair) for smoother metering
+    const rmsL = view.getFloat32(16, true);  // vals[0].second
+    const rmsR = nChans > 1 ? view.getFloat32(24, true) : rmsL; // vals[1].second
+    setMeterValue(ctrlTag, [rmsL, rmsR]);
+    return;
+  }
+
+  if (msgTag === MsgTags.kMsgTagLoadedModel) {
+    const path = atob(base64Data);
+    const name = getFileName(path);
+    document.getElementById('model-name').textContent = name;
+    document.getElementById('model-name').classList.add('loaded');
+    document.getElementById('model-browser').classList.remove('error');
+  }
+  else if (msgTag === MsgTags.kMsgTagLoadedIR) {
+    const path = atob(base64Data);
+    const name = getFileName(path);
+    document.getElementById('ir-name').textContent = name;
+    document.getElementById('ir-name').classList.add('loaded');
+    document.getElementById('ir-browser').classList.remove('error');
+  }
+  else if (msgTag === MsgTags.kMsgTagLoadFailed) {
+    if (ctrlTag === CtrlTags.kCtrlTagModelFileBrowser) {
+      document.getElementById('model-browser').classList.add('error');
+    } else if (ctrlTag === CtrlTags.kCtrlTagIRFileBrowser) {
+      document.getElementById('ir-browser').classList.add('error');
+    }
+  }
+}
+
+function OnArbitraryMessage(msgTag, dataSize, base64Data) {
+  // Handle arbitrary messages from C++
+}
+
+// Called from C++ via EvaluateJavaScript
+function onModelLoaded(info) {
+  // Update settings panel with model info
+  document.getElementById('model-sr').textContent = info.sampleRate ? info.sampleRate.toFixed(0) + ' Hz' : '—';
+  document.getElementById('model-in-level').textContent = info.hasInputLevel ? info.inputLevel.toFixed(1) + ' dBu' : '—';
+  document.getElementById('model-out-level').textContent = info.hasOutputLevel ? info.outputLevel.toFixed(1) + ' dBu' : '—';
+
+  // Show/hide slim icon
+  document.getElementById('slim-icon').classList.toggle('visible', info.isSlimmable);
+
+  // Update output mode availability in settings
+  const radios = document.querySelectorAll('#output-mode-group .settings-radio');
+  radios.forEach(el => {
+    const v = parseInt(el.dataset.value);
+    if (v === 1) el.classList.toggle('disabled', !info.hasLoudness);
+    if (v === 2) el.classList.toggle('disabled', !info.hasOutputLevel);
+  });
+}
+
+function onModelCleared() {
+  document.getElementById('model-name').textContent = 'Select model...';
+  document.getElementById('model-name').classList.remove('loaded');
+  document.getElementById('model-browser').classList.remove('error');
+  document.getElementById('slim-icon').classList.remove('visible');
+  document.getElementById('slim-overlay').classList.remove('visible');
+  document.getElementById('model-sr').textContent = '—';
+  document.getElementById('model-in-level').textContent = '—';
+  document.getElementById('model-out-level').textContent = '—';
+
+  // Reset output mode options
+  document.querySelectorAll('#output-mode-group .settings-radio').forEach(el => {
+    el.classList.remove('disabled');
+  });
+}
+
+// ===== Initialize =====
+function onLoad() {
+  initKnobs();
+  initToggles();
+  initFileBrowsers();
+  initSettings();
+  initSlimOverlay();
+
+  // Set default knob positions (will be overwritten by OnParamChange from C++)
+  knobDefs.forEach(def => {
+    const norm = (def.defaultVal - def.min) / (def.max - def.min);
+    setKnobValue(def.paramIdx, norm, false);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', onLoad);
+</script>
+</body>
+</html>
