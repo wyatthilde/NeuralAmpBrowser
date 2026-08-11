@@ -32,11 +32,11 @@
 			<array>
 				<dict>
 					<key>description</key>
-					<string>NeuralAmpModeler</string>
+					<string>NAM Stereo</string>
 					<key>manufacturer</key>
 					<string>SDAa</string>
 					<key>name</key>
-					<string>Steven Atkinson: NeuralAmpModeler</string>
+					<string>Steven Atkinson: NAM Stereo</string>
 					<key>sandboxSafe</key>
 					<true/>
 					<key>subtype</key>
